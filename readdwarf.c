@@ -150,8 +150,8 @@ dwarf_dump(const char *p, size_t filesize, uint8_t flags)
 	Elf_Ehdr		*eh = (Elf_Ehdr *)p;
 	Elf_Shdr		*sh;
 	const char		*shstrtab;
-	const char		*infobuf, *abbrevbuf;
-	size_t			 infolen, abbrevlen;
+	const char		*infobuf, *abbuf;
+	size_t			 infolen, ablen;
 	size_t			 i, shstrtabsize;
 
 	/* Find section header string table location and size. */
@@ -159,8 +159,8 @@ dwarf_dump(const char *p, size_t filesize, uint8_t flags)
 		return 1;
 
 	/* Find abbreviation location and size. */
-	if (elf_getsection(p, DEBUG_ABBREV, shstrtab, shstrtabsize, &abbrevbuf,
-	    &abbrevlen)) {
+	if (elf_getsection(p, DEBUG_ABBREV, shstrtab, shstrtabsize, &abbuf,
+	    &ablen)) {
 		warnx("%s section not found", DEBUG_ABBREV);
 		return 1;
 	}
@@ -179,47 +179,43 @@ dwarf_dump(const char *p, size_t filesize, uint8_t flags)
 
 
 	if (flags & DUMP_ABBREV) {
+		struct dwbuf	 abbrev = { .buf = abbuf, .len = ablen };
 		struct dwabbrev_queue dabq;
-		struct dwabbrev *dab;
 
 		SIMPLEQ_INIT(&dabq);
-		if (dw_abbrev_parse(abbrevbuf, abbrevlen, &dabq))
-			return 1;
 
-		SIMPLEQ_FOREACH(dab, &dabq, dab_next) {
-			struct dwattr *dat;
+		while (dw_ab_parse(&abbrev, &dabq) == 0) {
+			struct dwabbrev *dab;
 
-			printf("[%llu] %s\t\t[%s children]\n", dab->dab_code,
-			    dw_tag2name(dab->dab_tag),
-			    (dab->dab_children) ? "has" : "no");
+			SIMPLEQ_FOREACH(dab, &dabq, dab_next) {
+				struct dwattr *dat;
 
-			SIMPLEQ_FOREACH(dat, &dab->dab_attrs, dat_next) {
-				printf("      %s\t%s\n",
-				    dw_at2name(dat->dat_attr),
-				    dw_form2name(dat->dat_form));
+				printf("[%llu] %s\t\t[%s children]\n",
+				    dab->dab_code, dw_tag2name(dab->dab_tag),
+				    (dab->dab_children) ? "has" : "no");
+
+				SIMPLEQ_FOREACH(dat, &dab->dab_attrs, dat_next){
+					printf("      %s\t%s\n",
+					    dw_at2name(dat->dat_attr),
+					    dw_form2name(dat->dat_form));
+				}
 			}
-		}
 
-		dw_dabq_purge(&dabq);
+			dw_dabq_purge(&dabq);
+		}
 
 	}
 
 	if (flags & DUMP_INFO) {
-		struct dwcu_queue	 dcuq;
-		struct dwcu		*dcu;
-
-		SIMPLEQ_INIT(&dcuq);
-		if (dw_info_parse(infobuf, infolen, abbrevbuf, abbrevlen,
-		    &dcuq))
-			return 1;
+		struct dwbuf	 info = { .buf = infobuf, .len = infolen };
+		struct dwbuf	 abbrev = { .buf = abbuf, .len = ablen };
+		struct dwcu	*dcu = NULL;
 
 		printf("The section %s contains:\n\n", DEBUG_INFO);
-		SIMPLEQ_FOREACH(dcu, &dcuq, dcu_next) {
+		while (dw_cu_parse(&info, &abbrev, infolen, &dcu) == 0) {
 			dump_cu(dcu);
+			dw_dcu_free(dcu);
 		}
-
-
-		dw_dcuq_purge(&dcuq);
 	}
 
 	return 0;

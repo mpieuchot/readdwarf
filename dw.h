@@ -74,7 +74,6 @@ struct dwabbrev {
 SIMPLEQ_HEAD(dwabbrev_queue, dwabbrev);
 
 struct dwcu {
-	SIMPLEQ_ENTRY(dwcu)	 dcu_next;
 	uint64_t		 dcu_length;
 	uint64_t		 dcu_abbroff;
 	uint16_t		 dcu_version;
@@ -84,21 +83,15 @@ struct dwcu {
 	struct dwdie_queue	 dcu_dies;
 };
 
-SIMPLEQ_HEAD(dwcu_queue, dwcu);
-
 const char	*dw_tag2name(uint64_t);
 const char	*dw_at2name(uint64_t);
 const char	*dw_form2name(uint64_t);
 
-/* Parse .debug_abbrev section. */
-int	 dw_abbrev_parse(const char *, size_t, struct dwabbrev_queue *);
-
-/* Parse .debug_info section. */
-int	 dw_info_parse(const char *, size_t, const char *, size_t,
-	     struct dwcu_queue *);
+int	 dw_ab_parse(struct dwbuf *, struct dwabbrev_queue *);
+int	 dw_cu_parse(struct dwbuf *, struct dwbuf *, size_t, struct dwcu **);
 
 void	 dw_dabq_purge(struct dwabbrev_queue *);
-void	 dw_dcuq_purge(struct dwcu_queue *);
+void	 dw_dcu_free(struct dwcu *);
 
 
 #endif /* _DW_H_ */

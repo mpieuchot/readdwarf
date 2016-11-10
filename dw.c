@@ -53,8 +53,6 @@ static void	 dw_attr_purge(struct dwaval_queue *);
 static int	 dw_die_parse(struct dwbuf *, size_t, uint8_t,
 		     struct dwabbrev_queue *, struct dwdie_queue *);
 static void	 dw_die_purge(struct dwdie_queue *);
-static int	 dw_abbrev_parse_one(struct dwbuf *, size_t,
-		     struct dwabbrev_queue *);
 
 static int
 dw_read_bytes(struct dwbuf *d, void *v, size_t n)
@@ -439,14 +437,13 @@ dw_die_purge(struct dwdie_queue *dieq)
 }
 
 int
-dw_abbrev_parse_one(struct dwbuf *abseg, size_t off,
-    struct dwabbrev_queue *dabq)
+dw_ab_parse(struct dwbuf *abseg, struct dwabbrev_queue *dabq)
 {
 	struct dwabbrev	*dab;
 	uint64_t	 code, tag;
 	uint8_t		 children;
 
-	if (dw_skip_bytes(abseg, off))
+	if (abseg->len == 0)
 		return 1;
 
 	for (;;) {
@@ -496,19 +493,6 @@ dw_abbrev_parse_one(struct dwbuf *abseg, size_t off,
 	return 0;
 }
 
-int
-dw_abbrev_parse(const char *segbuf, size_t seglen, struct dwabbrev_queue *dabq)
-{
-	struct dwbuf	 abbrev = { .buf = segbuf, .len = seglen };
-
-	while (abbrev.len > 0) {
-		if (dw_abbrev_parse_one(&abbrev, 0, dabq))
-			return 1;
-	}
-
-	return 0;
-}
-
 void
 dw_dabq_purge(struct dwabbrev_queue *dabq)
 {
@@ -530,82 +514,82 @@ dw_dabq_purge(struct dwabbrev_queue *dabq)
 }
 
 int
-dw_info_parse(const char *segbuf, size_t seglen, const char *abbuf,
-    size_t ablen, struct dwcu_queue *dcuq)
+dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
+    struct dwcu **dcup)
 {
-	struct dwbuf	 info = { .buf = segbuf, .len = seglen };
+	struct dwbuf	 abseg = *abbrev;
+	struct dwbuf	 dwbuf;
+	size_t		 segoff, nextoff;
+	struct dwcu	*dcu = NULL;
+	uint32_t	 length = 0, abbroff = 0;
+	uint16_t	 version;
+	size_t		 addrsize;
+	uint8_t		 psz;
 
-	while (info.len > 0) {
-		struct dwbuf	 abseg = { .buf = abbuf, .len = ablen };
-		struct dwbuf	 dwbuf;
-		size_t		 segoff, nextoff;
-		struct dwcu	*dcu = NULL;
-		uint32_t	 length = 0, abbroff = 0;
-		uint16_t	 version;
-		size_t		 addrsize;
-		uint8_t		 psz;
+	if (info->len == 0)
+		return 1;
 
-		/* Offset in the segment of the current Compile Unit. */
-		segoff = seglen - info.len;
+	/* Offset in the segment of the current Compile Unit. */
+	segoff = seglen - info->len;
 
-		if (dw_read_u32(&info, &length) || length >= 0xfffffff0 ||
-		    length > info.len)
-			return 1;
+	if (dw_read_u32(info, &length) || length >= 0xfffffff0 ||
+	    length > info->len)
+		return 1;
 
-		/* Offset of the next Compule Unit. */
-		nextoff = segoff + length + sizeof(uint32_t);
+	/* Offset of the next Compule Unit. */
+	nextoff = segoff + length + sizeof(uint32_t);
 
-		if (dw_read_buf(&info, &dwbuf, length))
-			return 1;
+	if (dw_read_buf(info, &dwbuf, length))
+		return 1;
 
-		addrsize = 4; /* XXX */
+	addrsize = 4; /* XXX */
 
-		if (dw_read_u16(&dwbuf, &version) ||
-		    dw_read_bytes(&dwbuf, &abbroff, addrsize) ||
-		    dw_read_u8(&dwbuf, &psz))
-			return 1;
+	if (dw_read_u16(&dwbuf, &version) ||
+	    dw_read_bytes(&dwbuf, &abbroff, addrsize) ||
+	    dw_read_u8(&dwbuf, &psz))
+		return 1;
 
-		dcu = malloc(sizeof(*dcu));
-		if (dcu == NULL)
-			return 1;
+	dcu = malloc(sizeof(*dcu));
+	if (dcu == NULL)
+		return 1;
 
-		dcu->dcu_offset = segoff;
-		dcu->dcu_length = length;
-		dcu->dcu_version = version;
-		dcu->dcu_abbroff = abbroff;
-		dcu->dcu_psize = psz;
-		SIMPLEQ_INIT(&dcu->dcu_abbrevs);
-		SIMPLEQ_INIT(&dcu->dcu_dies);
+	dcu->dcu_offset = segoff;
+	dcu->dcu_length = length;
+	dcu->dcu_version = version;
+	dcu->dcu_abbroff = abbroff;
+	dcu->dcu_psize = psz;
+	SIMPLEQ_INIT(&dcu->dcu_abbrevs);
+	SIMPLEQ_INIT(&dcu->dcu_dies);
 
-		if (dw_abbrev_parse_one(&abseg, abbroff, &dcu->dcu_abbrevs)) {
-			dw_dabq_purge(&dcu->dcu_abbrevs);
-			return 1;
-		}
+	if (dw_skip_bytes(&abseg, abbroff))
+		return 1;
 
-		if (dw_die_parse(&dwbuf, nextoff, psz, &dcu->dcu_abbrevs,
-		    &dcu->dcu_dies)) {
-			dw_die_purge(&dcu->dcu_dies);
-			return 1;
-		}
-
-		SIMPLEQ_INSERT_TAIL(dcuq, dcu, dcu_next);
+	if (dw_ab_parse(&abseg, &dcu->dcu_abbrevs)) {
+		dw_dabq_purge(&dcu->dcu_abbrevs);
+		return 1;
 	}
+
+	if (dw_die_parse(&dwbuf, nextoff, psz, &dcu->dcu_abbrevs,
+	    &dcu->dcu_dies)) {
+		dw_die_purge(&dcu->dcu_dies);
+		return 1;
+	}
+
+	if (dcup != NULL)
+		*dcup = dcu;
+	else
+		dw_dcu_free(dcu);
 
 	return 0;
 }
 
 void
-dw_dcuq_purge(struct dwcu_queue *dcuq)
+dw_dcu_free(struct dwcu *dcu)
 {
-	struct dwcu	*dcu;
+	if (dcu == NULL)
+		return;
 
-	while ((dcu = SIMPLEQ_FIRST(dcuq)) != NULL) {
-
-		SIMPLEQ_REMOVE_HEAD(dcuq, dcu_next);
-		dw_die_purge(&dcu->dcu_dies);
-		dw_dabq_purge(&dcu->dcu_abbrevs);
-		free(dcu);
-	}
-
-	SIMPLEQ_INIT(dcuq);
+	dw_die_purge(&dcu->dcu_dies);
+	dw_dabq_purge(&dcu->dcu_abbrevs);
+	free(dcu);
 }
