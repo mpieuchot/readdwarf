@@ -367,10 +367,9 @@ dw_attr_purge(struct dwaval_queue *davq)
 }
 
 static int
-dw_die_parse(struct dwbuf *d, size_t nextoff, uint8_t psz,
+dw_die_parse(struct dwbuf *dwbuf, size_t nextoff, uint8_t psz,
     struct dwabbrev_queue *dabq, struct dwdie_queue *dieq)
 {
-	struct dwbuf	 dwbuf = *d;
 	struct dwdie	*die;
 	struct dwaval	*dav;
 	struct dwabbrev	*dab;
@@ -380,9 +379,9 @@ dw_die_parse(struct dwbuf *d, size_t nextoff, uint8_t psz,
 	uint8_t		 lvl = 0;
 
 
-	while (dwbuf.len > 0) {
-		doff = nextoff - dwbuf.len;
-		if (dw_read_uleb128(&dwbuf, &code))
+	while (dwbuf->len > 0) {
+		doff = nextoff - dwbuf->len;
+		if (dw_read_uleb128(dwbuf, &code))
 			return 1;
 
 		if (code == 0) {
@@ -407,7 +406,7 @@ dw_die_parse(struct dwbuf *d, size_t nextoff, uint8_t psz,
 		SIMPLEQ_INIT(&die->die_avals);
 
 		SIMPLEQ_FOREACH(dat, &dab->dab_attrs, dat_next) {
-			if (dw_attr_parse(&dwbuf, dat, psz, &die->die_avals)) {
+			if (dw_attr_parse(dwbuf, dat, psz, &die->die_avals)) {
 				dw_attr_purge(&die->die_avals);
 				return 1;
 			}
