@@ -71,10 +71,8 @@ const char	*inline2name(unsigned short);
 __dead void
 usage(void)
 {
-	extern char		*__progname;
-
-	fprintf(stderr, "usage: %s [-ails] [file ...]\n",
-	    __progname);
+	fprintf(stderr, "usage: %s [-ai] [file ...]\n",
+	    getprogname());
 	exit(1);
 }
 
@@ -87,7 +85,7 @@ main(int argc, char *argv[])
 
 	setlocale(LC_ALL, "");
 
-	while ((ch = getopt(argc, argv, "ails")) != -1) {
+	while ((ch = getopt(argc, argv, "ai")) != -1) {
 		switch (ch) {
 		case 'a':
 			flags |= DUMP_ABBREV;
@@ -102,6 +100,9 @@ main(int argc, char *argv[])
 
 	argc -= optind;
 	argv += optind;
+
+	if (argc <= 0)
+		usage();
 
 	/* Dump everything by default */
 	if (flags == 0)
