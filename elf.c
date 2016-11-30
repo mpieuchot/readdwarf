@@ -25,8 +25,10 @@ iself(const char *p, size_t filesize)
 {
 	Elf_Ehdr		*eh = (Elf_Ehdr *)p;
 
-	if (filesize < sizeof(Elf_Ehdr))
+	if (filesize < (off_t)sizeof(Elf_Ehdr)) {
+		warnx("file too small to be ELF");
 		return 0;
+	}
 
 	if (eh->e_ehsize < sizeof(Elf_Ehdr) || !IS_ELF(*eh))
 		return 0;

@@ -130,10 +130,6 @@ dump(const char *path, uint8_t flags)
 		warn("fstat");
 		return 1;
 	}
-	if (st.st_size < (off_t)sizeof(Elf_Ehdr)) {
-		warnx("file too small to be ELF");
-		return 1;
-	}
 	if ((uintmax_t)st.st_size > SIZE_MAX) {
 		warnx("file too big to fit memory");
 		return 1;
