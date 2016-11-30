@@ -184,7 +184,6 @@ dwarf_dump(const char *p, size_t filesize, uint8_t flags)
 		warnx("%s section not found", DEBUG_STR);
 
 
-
 	if (flags & DUMP_ABBREV) {
 		struct dwbuf	 abbrev = { .buf = abbuf, .len = ablen };
 		struct dwabbrev_queue dabq = SIMPLEQ_HEAD_INITIALIZER(dabq);

@@ -528,6 +528,9 @@ dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
 	if (info->len == 0)
 		return 1;
 
+	if (dw_skip_bytes(&abseg, abbroff))
+		return 1;
+
 	/* Offset in the segment of the current Compile Unit. */
 	segoff = seglen - info->len;
 
@@ -560,17 +563,14 @@ dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
 	SIMPLEQ_INIT(&dcu->dcu_abbrevs);
 	SIMPLEQ_INIT(&dcu->dcu_dies);
 
-	if (dw_skip_bytes(&abseg, abbroff))
-		return 1;
-
 	if (dw_ab_parse(&abseg, &dcu->dcu_abbrevs)) {
-		dw_dabq_purge(&dcu->dcu_abbrevs);
+		dw_dcu_free(dcu);
 		return 1;
 	}
 
 	if (dw_die_parse(&dwbuf, nextoff, psz, &dcu->dcu_abbrevs,
 	    &dcu->dcu_dies)) {
-		dw_die_purge(&dcu->dcu_dies);
+		dw_dcu_free(dcu);
 		return 1;
 	}
 
