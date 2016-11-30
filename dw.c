@@ -17,6 +17,7 @@
 
 #include <sys/queue.h>
 
+#include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -273,7 +274,7 @@ dw_attr_parse(struct dwbuf *dwbuf, struct dwattr *dat, uint8_t psz,
 
 	dav = calloc(1, sizeof(*dav));
 	if (dav == NULL)
-		return 1;
+		return ENOMEM;
 
 	dav->dav_dat = dat;
 
@@ -397,7 +398,7 @@ dw_die_parse(struct dwbuf *dwbuf, size_t nextoff, uint8_t psz,
 
 		die = malloc(sizeof(*die));
 		if (die == NULL)
-			return 1;
+			return ENOMEM;
 
 		die->die_lvl = lvl;
 		die->die_dab = dab;
@@ -457,7 +458,7 @@ dw_ab_parse(struct dwbuf *abseg, struct dwabbrev_queue *dabq)
 
 		dab = malloc(sizeof(*dab));
 		if (dab == NULL)
-			return 1;
+			return ENOMEM;
 
 		dab->dab_code = code;
 		dab->dab_tag = tag;
@@ -479,7 +480,7 @@ dw_ab_parse(struct dwbuf *abseg, struct dwabbrev_queue *dabq)
 
 			dat = malloc(sizeof(*dat));
 			if (dat == NULL)
-				return 1;
+				return ENOMEM;
 
 			dat->dat_attr = attr;
 			dat->dat_form = form;
@@ -556,7 +557,7 @@ dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
 
 	dcu = malloc(sizeof(*dcu));
 	if (dcu == NULL)
-		return 1;
+		return ENOMEM;
 
 	dcu->dcu_offset = segoff;
 	dcu->dcu_length = length;
