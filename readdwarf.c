@@ -53,6 +53,7 @@ __dead void	 usage(void);
 
 int		 dwarf_dump(const char *, size_t, uint8_t);
 int		 dump_cu(struct dwcu *);
+void		 dump_dav(struct dwaval *, size_t);
 
 /* elf.c */
 int		 iself(const char *, size_t);
@@ -244,110 +245,115 @@ dump_cu(struct dwcu *dcu)
 		    die->die_offset, die->die_dab->dab_code,
 		    dw_tag2name(die->die_dab->dab_tag));
 
-		SIMPLEQ_FOREACH(dav, &die->die_avals, dav_next) {
-			uint64_t attr = dav->dav_dat->dat_attr;
-			uint64_t form = dav->dav_dat->dat_form;
-			uint64_t val = 0;
-			const char *str = NULL;
-
-			printf("     %-18s: ", dw_at2name(attr));
-
-			val = dav2val(dav, dcu->dcu_psize);
-			str = dav2str(dav);
-			if (val == (uint64_t)-1 && str == NULL) {
-				printf("%s: %llu\n", dw_form2name(form), form);
-				continue;
-			}
-
-			switch (attr) {
-			case DW_AT_producer:
-			case DW_AT_name:
-			case DW_AT_comp_dir:
-				switch (form) {
-				case DW_FORM_string:
-					printf("%s", str);
-					break;
-				case DW_FORM_strp:
-					printf("(indirect string, offset:"
-					    " 0x%llx): %s", val, str);
-					break;
-				default:
-					printf(" %s", dw_form2name(form));
-					break;
-				}
-				break;
-			case DW_AT_byte_size:
-			case DW_AT_decl_file:
-			case DW_AT_decl_line:
-			case DW_AT_upper_bound:
-			case DW_AT_prototyped:
-			case DW_AT_external:
-			case DW_AT_declaration:
-			case DW_AT_call_file:
-			case DW_AT_call_line:
-				printf("%llu", val);
-				break;
-			case DW_AT_inline:
-				printf("%llu\t(%s)", val, inline2name(val));
-				break;
-			case DW_AT_stmt_list:
-			case DW_AT_low_pc:
-			case DW_AT_high_pc:
-			case DW_AT_ranges:
-				printf("0x%llx", val);
-				break;
-			case DW_AT_language:
-				printf("%llu\t(%s)", val, lang2name(val));
-				break;
-			case DW_AT_encoding:
-				printf("%llu\t(%s)", val, enc2name(val));
-				break;
-			case DW_AT_location:
-			case DW_AT_frame_base:
-			case DW_AT_data_member_location:
-				switch (form) {
-				case DW_FORM_block1:
-				case DW_FORM_block2:
-				case DW_FORM_block4:
-				case DW_FORM_block:
-					printf("%llu byte block", val);
-					break;
-				case DW_FORM_data1:
-				case DW_FORM_data2:
-				case DW_FORM_data4:
-				case DW_FORM_data8:
-					printf("0x%llx\t(location list)", val);
-					break;
-				default:
-					printf("%s", dw_form2name(form));
-					break;
-				}
-				break;
-			case DW_AT_type:
-			case DW_AT_sibling:
-			case DW_AT_abstract_origin:
-				printf("<%llx>", val);
-				break;
-			default:
-				printf("unimplemented");
-				break;
-			}
-			printf("\n");
-		}
+		SIMPLEQ_FOREACH(dav, &die->die_avals, dav_next)
+			dump_dav(dav, dcu->dcu_psize);
 	}
 
 	return 0;
 }
 
+void
+dump_dav(struct dwaval *dav, size_t psz)
+{
+	uint64_t attr = dav->dav_dat->dat_attr;
+	uint64_t form = dav->dav_dat->dat_form;
+	uint64_t val = 0;
+	const char *str = NULL;
+
+	printf("     %-18s: ", dw_at2name(attr));
+
+	val = dav2val(dav, psz);
+	str = dav2str(dav);
+	if (val == (uint64_t)-1 && str == NULL) {
+		printf("%s: %llu\n", dw_form2name(form), form);
+		return;
+	}
+
+	switch (attr) {
+	case DW_AT_producer:
+	case DW_AT_name:
+	case DW_AT_comp_dir:
+		switch (form) {
+		case DW_FORM_string:
+			printf("%s", str);
+			break;
+		case DW_FORM_strp:
+			printf("(indirect string, offset:"
+			    " 0x%llx): %s", val, str);
+			break;
+		default:
+			printf(" %s", dw_form2name(form));
+			break;
+		}
+		break;
+	case DW_AT_byte_size:
+	case DW_AT_decl_file:
+	case DW_AT_decl_line:
+	case DW_AT_upper_bound:
+	case DW_AT_prototyped:
+	case DW_AT_external:
+	case DW_AT_declaration:
+	case DW_AT_call_file:
+	case DW_AT_call_line:
+		printf("%llu", val);
+		break;
+	case DW_AT_inline:
+		printf("%llu\t(%s)", val, inline2name(val));
+		break;
+	case DW_AT_stmt_list:
+	case DW_AT_low_pc:
+	case DW_AT_high_pc:
+	case DW_AT_ranges:
+		printf("0x%llx", val);
+		break;
+	case DW_AT_language:
+		printf("%llu\t(%s)", val, lang2name(val));
+		break;
+	case DW_AT_encoding:
+		printf("%llu\t(%s)", val, enc2name(val));
+		break;
+	case DW_AT_location:
+	case DW_AT_frame_base:
+	case DW_AT_data_member_location:
+		switch (form) {
+		case DW_FORM_block1:
+		case DW_FORM_block2:
+		case DW_FORM_block4:
+		case DW_FORM_block:
+			printf("%llu byte block", val);
+			break;
+		case DW_FORM_data1:
+		case DW_FORM_data2:
+		case DW_FORM_data4:
+		case DW_FORM_data8:
+			printf("0x%llx\t(location list)", val);
+			break;
+		default:
+			printf("%s", dw_form2name(form));
+			break;
+		}
+		break;
+	case DW_AT_type:
+	case DW_AT_sibling:
+	case DW_AT_abstract_origin:
+		printf("<%llx>", val);
+		break;
+	default:
+		printf("unimplemented");
+		break;
+	}
+	printf("\n");
+}
+
 uint64_t
-dav2val(struct dwaval *dav, size_t psize)
+dav2val(struct dwaval *dav, size_t psz)
 {
 	uint64_t val = (uint64_t)-1;
 
 	switch (dav->dav_dat->dat_form) {
 	case DW_FORM_addr:
 	case DW_FORM_ref_addr:
-		if (psize == sizeof(uint32_t))
+		if (psz == sizeof(uint32_t))
 			val = dav->dav_u32;
 		else
 			val = dav->dav_u64;
