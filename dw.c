@@ -377,6 +377,7 @@ dw_die_parse(struct dwbuf *dwbuf, size_t nextoff, uint8_t psz,
 	uint64_t	 code;
 	size_t		 doff;
 	uint8_t		 lvl = 0;
+	int		 error;
 
 
 	while (dwbuf->len > 0) {
@@ -406,9 +407,10 @@ dw_die_parse(struct dwbuf *dwbuf, size_t nextoff, uint8_t psz,
 		SIMPLEQ_INIT(&die->die_avals);
 
 		SIMPLEQ_FOREACH(dat, &dab->dab_attrs, dat_next) {
-			if (dw_attr_parse(dwbuf, dat, psz, &die->die_avals)) {
+			error = dw_attr_parse(dwbuf, dat, psz, &die->die_avals);
+			if (error != 0) {
 				dw_attr_purge(&die->die_avals);
-				return 1;
+				return error;
 			}
 		}
 
@@ -518,12 +520,12 @@ dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
 {
 	struct dwbuf	 abseg = *abbrev;
 	struct dwbuf	 dwbuf;
-	size_t		 segoff, nextoff;
+	size_t		 segoff, nextoff, addrsize;
 	struct dwcu	*dcu = NULL;
 	uint32_t	 length = 0, abbroff = 0;
 	uint16_t	 version;
-	size_t		 addrsize;
 	uint8_t		 psz;
+	int		 error;
 
 	if (info->len == 0)
 		return 1;
@@ -567,15 +569,17 @@ dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
 	SIMPLEQ_INIT(&dcu->dcu_abbrevs);
 	SIMPLEQ_INIT(&dcu->dcu_dies);
 
-	if (dw_ab_parse(&abseg, &dcu->dcu_abbrevs)) {
+	error = dw_ab_parse(&abseg, &dcu->dcu_abbrevs);
+	if (error != 0) {
 		dw_dcu_free(dcu);
-		return 1;
+		return error;
 	}
 
-	if (dw_die_parse(&dwbuf, nextoff, psz, &dcu->dcu_abbrevs,
-	    &dcu->dcu_dies)) {
+	error = dw_die_parse(&dwbuf, nextoff, psz, &dcu->dcu_abbrevs,
+	    &dcu->dcu_dies);
+	if (error != 0) {
 		dw_dcu_free(dcu);
-		return 1;
+		return error;
 	}
 
 	if (dcup != NULL)
