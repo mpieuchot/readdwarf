@@ -68,25 +68,25 @@ dw_read_bytes(struct dwbuf *d, void *v, size_t n)
 static int
 dw_read_u8(struct dwbuf *d, uint8_t *v)
 {
-	return (dw_read_bytes(d, v, sizeof(*v)));
+	return dw_read_bytes(d, v, sizeof(*v));
 }
 
 static int
 dw_read_u16(struct dwbuf *d, uint16_t *v)
 {
-	return (dw_read_bytes(d, v, sizeof(*v)));
+	return dw_read_bytes(d, v, sizeof(*v));
 }
 
 static int
 dw_read_u32(struct dwbuf *d, uint32_t *v)
 {
-	return (dw_read_bytes(d, v, sizeof(*v)));
+	return dw_read_bytes(d, v, sizeof(*v));
 }
 
 static int
 dw_read_u64(struct dwbuf *d, uint64_t *v)
 {
-	return (dw_read_bytes(d, v, sizeof(*v)));
+	return dw_read_bytes(d, v, sizeof(*v));
 }
 
 /* Read a DWARF LEB128 (little-endian base-128) value. */
@@ -113,13 +113,13 @@ dw_read_leb128(struct dwbuf *d, uint64_t *v, int signextend)
 static int
 dw_read_sleb128(struct dwbuf *d, int64_t *v)
 {
-	return (dw_read_leb128(d, (uint64_t *)v, 1));
+	return dw_read_leb128(d, (uint64_t *)v, 1);
 }
 
 static int
 dw_read_uleb128(struct dwbuf *d, uint64_t *v)
 {
-	return (dw_read_leb128(d, v, 0));
+	return dw_read_leb128(d, v, 0);
 }
 
 /* Read a NUL terminated string. */
