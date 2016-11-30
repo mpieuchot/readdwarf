@@ -58,7 +58,7 @@ static int
 dw_read_bytes(struct dwbuf *d, void *v, size_t n)
 {
 	if (d->len < n)
-		return 1;
+		return -1;
 	memcpy(v, d->buf, n);
 	d->buf += n;
 	d->len -= n;
@@ -107,7 +107,7 @@ dw_read_leb128(struct dwbuf *d, uint64_t *v, int signextend)
 			return 0;
 		}
 	}
-	return 1;
+	return -1;
 }
 
 static int
@@ -130,7 +130,7 @@ dw_read_string(struct dwbuf *d, const char **s)
 	size_t n;
 
 	if (end == NULL)
-		return 1;
+		return -1;
 
 	n = end - d->buf + 1;
 	*s = d->buf;
@@ -143,7 +143,7 @@ static int
 dw_read_buf(struct dwbuf *d, struct dwbuf *v, size_t n)
 {
 	if (d->len < n)
-		return 1;
+		return -1;
 	v->buf = d->buf;
 	v->len = n;
 	d->buf += n;
@@ -155,7 +155,7 @@ static int
 dw_skip_bytes(struct dwbuf *d, size_t n)
 {
 	if (d->len < n)
-		return 1;
+		return -1;
 	d->buf += n;
 	d->len -= n;
 	return 0;
@@ -172,19 +172,19 @@ dw_read_filename(struct dwbuf *names, const char **outdirname,
 	size_t i;
 
 	if (file == 0)
-		return 1;
+		return -1;
 
 	/* Skip over opcode table. */
 	for (i = 1; i < opcode_base; i++) {
 		if (dw_read_uleb128(names, &dummy))
-			return 1;
+			return -1;
 	}
 
 	/* Skip over directory name table for now. */
 	dirnames = *names;
 	for (;;) {
 		if (dw_read_string(names, &name))
-			return 1;
+			return -1;
 		if (*name == '\0')
 			break;
 	}
@@ -195,12 +195,12 @@ dw_read_filename(struct dwbuf *names, const char **outdirname,
 		    dw_read_uleb128(names, &dir) ||
 		    dw_read_uleb128(names, &mtime) ||
 		    dw_read_uleb128(names, &size))
-			return 1;
+			return -1;
 	}
 
 	for (i = 0; i < dir; i++) {
 		if (!dw_read_string(&dirnames, &dirname) || *dirname == '\0')
-			return 1;
+			return -1;
 	}
 
 	*outdirname = dirname;
@@ -269,7 +269,7 @@ dw_attr_parse(struct dwbuf *dwbuf, struct dwattr *dat, uint8_t psz,
 	while (form == DW_FORM_indirect) {
 		/* XXX loop prevention not strict enough? */
 		if (dw_read_uleb128(dwbuf, &form) || (++i > 3))
-			return 1;
+			return ELOOP;
 	}
 
 	dav = calloc(1, sizeof(*dav));
@@ -340,7 +340,7 @@ dw_attr_parse(struct dwbuf *dwbuf, struct dwattr *dat, uint8_t psz,
 		dav->dav_u8 = 1;
 		break;
 	default:
-		error = 1;
+		error = ENOENT;
 		break;
 	}
 
@@ -383,7 +383,7 @@ dw_die_parse(struct dwbuf *dwbuf, size_t nextoff, uint8_t psz,
 	while (dwbuf->len > 0) {
 		doff = nextoff - dwbuf->len;
 		if (dw_read_uleb128(dwbuf, &code))
-			return 1;
+			return -1;
 
 		if (code == 0) {
 			lvl--;
@@ -395,7 +395,7 @@ dw_die_parse(struct dwbuf *dwbuf, size_t nextoff, uint8_t psz,
 				break;
 		}
 		if (dab == NULL)
-			return 1;
+			return ESRCH;
 
 		die = malloc(sizeof(*die));
 		if (die == NULL)
@@ -445,18 +445,15 @@ dw_ab_parse(struct dwbuf *abseg, struct dwabbrev_queue *dabq)
 	uint8_t		 children;
 
 	if (abseg->len == 0)
-		return 1;
+		return EINVAL;
 
 	for (;;) {
-		if (dw_read_uleb128(abseg, &code))
-			return 0;
-
-		if (code == 0)
+		if (dw_read_uleb128(abseg, &code) || (code == 0))
 			break;
 
 		if (dw_read_uleb128(abseg, &tag) ||
 		    dw_read_u8(abseg, &children))
-			return 1;
+			return -1;
 
 		dab = malloc(sizeof(*dab));
 		if (dab == NULL)
@@ -475,7 +472,7 @@ dw_ab_parse(struct dwbuf *abseg, struct dwabbrev_queue *dabq)
 
 			if (dw_read_uleb128(abseg, &attr) ||
 			    dw_read_uleb128(abseg, &form))
-				return 1;
+				return -1;
 
 			if ((attr == 0) && (form == 0))
 				break;
@@ -527,35 +524,37 @@ dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
 	uint8_t		 psz;
 	int		 error;
 
-	if (info->len == 0)
-		return 1;
+	if (info->len == 0 || abbrev->len == 0)
+		return EINVAL;
 
 	if (dw_skip_bytes(&abseg, abbroff))
-		return 1;
+		return -1;
 
 	/* Offset in the segment of the current Compile Unit. */
 	segoff = seglen - info->len;
 
-	if (dw_read_u32(info, &length) || length >= 0xfffffff0 ||
-	    length > info->len)
-		return 1;
+	if (dw_read_u32(info, &length))
+		return -1;
+
+	if (length >= 0xfffffff0 || length > info->len)
+		return EOVERFLOW;
 
 	/* Offset of the next Compule Unit. */
 	nextoff = segoff + length + sizeof(uint32_t);
 
 	if (dw_read_buf(info, &dwbuf, length))
-		return 1;
+		return -1;
 
 	addrsize = 4; /* XXX */
 
 	if (dw_read_u16(&dwbuf, &version) ||
 	    dw_read_bytes(&dwbuf, &abbroff, addrsize) ||
 	    dw_read_u8(&dwbuf, &psz))
-		return 1;
+		return -1;
 
 	/* Only DWARF2 until extended. */
 	if (version != 2)
-		return 1;
+		return ENOTSUP;
 
 	dcu = malloc(sizeof(*dcu));
 	if (dcu == NULL)
