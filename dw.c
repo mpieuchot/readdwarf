@@ -18,7 +18,6 @@
 #include <sys/queue.h>
 
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -549,6 +548,10 @@ dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
 	if (dw_read_u16(&dwbuf, &version) ||
 	    dw_read_bytes(&dwbuf, &abbroff, addrsize) ||
 	    dw_read_u8(&dwbuf, &psz))
+		return 1;
+
+	/* Only DWARF2 until extended. */
+	if (version != 2)
 		return 1;
 
 	dcu = malloc(sizeof(*dcu));
