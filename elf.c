@@ -75,15 +75,15 @@ elf_getshstrtab(const char *p, size_t filesize, const char **shstrtab,
 	sh = (Elf_Shdr *)(p + eh->e_shoff + eh->e_shstrndx * eh->e_shentsize);
 	if (sh->sh_type != SHT_STRTAB) {
 		warnx("unexpected string table type");
-		return 1;
+		return -1;
 	}
 	if (sh->sh_offset > filesize) {
 		warnx("bogus string table offset");
-		return 1;
+		return -1;
 	}
 	if (sh->sh_size > filesize - sh->sh_offset) {
 		warnx("bogus string table size");
-		return 1;
+		return -1;
 	}
 	if (shstrtab != NULL)
 		*shstrtab = p + sh->sh_offset;
@@ -122,7 +122,7 @@ elf_getsymtab(const char *p, const char *shstrtab, size_t shstrtabsz,
 		}
 	}
 
-	return 1;
+	return -1;
 }
 
 int
@@ -134,6 +134,8 @@ elf_getsection(const char *p, const char *sname, const char *shstrtab,
 	size_t		 i, snlen;
 
 	snlen = strlen(sname);
+	if (snlen == 0)
+		return -1;
 
 	for (i = 0; i < eh->e_shnum; i++) {
 		sh = (Elf_Shdr *)(p + eh->e_shoff + i * eh->e_shentsize);
@@ -151,5 +153,5 @@ elf_getsection(const char *p, const char *sname, const char *shstrtab,
 		}
 	}
 
-	return 1;
+	return -1;
 }
