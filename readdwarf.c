@@ -57,7 +57,7 @@ void		 dump_dav(struct dwaval *, size_t);
 
 /* elf.c */
 int		 iself(const char *, size_t);
-int		 elf_getshstrtab(const char *, size_t, const char **, size_t *);
+int		 elf_getshstab(const char *, size_t, const char **, size_t *);
 int		 elf_getsymtab(const char *, const char *, size_t,
 		     const Elf_Sym **, size_t *);
 int		 elf_getsection(const char *, const char *, const char *,
@@ -157,31 +157,30 @@ dwarf_dump(const char *p, size_t filesize, uint8_t flags)
 {
 	Elf_Ehdr		*eh = (Elf_Ehdr *)p;
 	Elf_Shdr		*sh;
-	const char		*shstrtab;
+	const char		*shstab;
 	const char		*infobuf, *abbuf;
 	size_t			 infolen, ablen;
-	size_t			 i, shstrtabsize;
+	size_t			 i, shstabsz;
 
 	/* Find section header string table location and size. */
-	if (elf_getshstrtab(p, filesize, &shstrtab, &shstrtabsize))
+	if (elf_getshstab(p, filesize, &shstab, &shstabsz))
 		return 1;
 
 	/* Find abbreviation location and size. */
-	if (elf_getsection(p, DEBUG_ABBREV, shstrtab, shstrtabsize, &abbuf,
+	if (elf_getsection(p, DEBUG_ABBREV, shstab, shstabsz, &abbuf,
 	    &ablen)) {
 		warnx("%s section not found", DEBUG_ABBREV);
 		return 1;
 	}
 
-	if (elf_getsection(p, DEBUG_INFO, shstrtab, shstrtabsize, &infobuf,
+	if (elf_getsection(p, DEBUG_INFO, shstab, shstabsz, &infobuf,
 	    &infolen)) {
 		warnx("%s section not found", DEBUG_INFO);
 		return 1;
 	}
 
 	/* Find string table location and size. */
-	if (elf_getsection(p, DEBUG_STR, shstrtab, shstrtabsize, &dstrbuf,
-	    &dstrlen))
+	if (elf_getsection(p, DEBUG_STR, shstab, shstabsz, &dstrbuf, &dstrlen))
 		warnx("%s section not found", DEBUG_STR);
 
 

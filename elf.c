@@ -66,8 +66,8 @@ iself(const char *p, size_t filesize)
 }
 
 int
-elf_getshstrtab(const char *p, size_t filesize, const char **shstrtab,
-    size_t *shstrtabsize)
+elf_getshstab(const char *p, size_t filesize, const char **shstab,
+    size_t *shstabsize)
 {
 	Elf_Ehdr		*eh = (Elf_Ehdr *)p;
 	Elf_Shdr		*sh;
@@ -85,16 +85,16 @@ elf_getshstrtab(const char *p, size_t filesize, const char **shstrtab,
 		warnx("bogus string table size");
 		return -1;
 	}
-	if (shstrtab != NULL)
-		*shstrtab = p + sh->sh_offset;
-	if (shstrtabsize != NULL)
-		*shstrtabsize = sh->sh_size;
+	if (shstab != NULL)
+		*shstab = p + sh->sh_offset;
+	if (shstabsize != NULL)
+		*shstabsize = sh->sh_size;
 
 	return 0;
 }
 
 int
-elf_getsymtab(const char *p, const char *shstrtab, size_t shstrtabsz,
+elf_getsymtab(const char *p, const char *shstab, size_t shstabsz,
     const Elf_Sym **symtab, size_t *nsymb)
 {
 	Elf_Ehdr	*eh = (Elf_Ehdr *)p;
@@ -109,10 +109,10 @@ elf_getsymtab(const char *p, const char *shstrtab, size_t shstrtabsz,
 		if (sh->sh_type != SHT_SYMTAB)
 			continue;
 
-		if ((sh->sh_link >= eh->e_shnum) || (sh->sh_name >= shstrtabsz))
+		if ((sh->sh_link >= eh->e_shnum) || (sh->sh_name >= shstabsz))
 			continue;
 
-		if (strncmp(shstrtab + sh->sh_name, ELF_SYMTAB, snlen) == 0) {
+		if (strncmp(shstab + sh->sh_name, ELF_SYMTAB, snlen) == 0) {
 			if (symtab != NULL)
 				*symtab = (Elf_Sym *)(p + sh->sh_offset);
 			if (nsymb != NULL)
@@ -126,8 +126,8 @@ elf_getsymtab(const char *p, const char *shstrtab, size_t shstrtabsz,
 }
 
 int
-elf_getsection(const char *p, const char *sname, const char *shstrtab,
-    size_t shstrtabsz, const char **sdata, size_t *ssz)
+elf_getsection(const char *p, const char *sname, const char *shstab,
+    size_t shstabsz, const char **sdata, size_t *ssz)
 {
 	Elf_Ehdr	*eh = (Elf_Ehdr *)p;
 	Elf_Shdr	*sh;
@@ -140,10 +140,10 @@ elf_getsection(const char *p, const char *sname, const char *shstrtab,
 	for (i = 0; i < eh->e_shnum; i++) {
 		sh = (Elf_Shdr *)(p + eh->e_shoff + i * eh->e_shentsize);
 
-		if ((sh->sh_link >= eh->e_shnum) || (sh->sh_name >= shstrtabsz))
+		if ((sh->sh_link >= eh->e_shnum) || (sh->sh_name >= shstabsz))
 			continue;
 
-		if (strncmp(shstrtab + sh->sh_name, sname, snlen) == 0) {
+		if (strncmp(shstab + sh->sh_name, sname, snlen) == 0) {
 			if (sdata != NULL)
 				*sdata = p + sh->sh_offset;
 			if (ssz != NULL)
