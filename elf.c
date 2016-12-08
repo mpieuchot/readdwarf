@@ -94,12 +94,14 @@ elf_getshstrtab(const char *p, size_t filesize, const char **shstrtab,
 }
 
 int
-elf_getsymtab(const char *p, const char *shstrtab, size_t shstrtabsize,
+elf_getsymtab(const char *p, const char *shstrtab, size_t shstrtabsz,
     const Elf_Sym **symtab, size_t *nsymb)
 {
 	Elf_Ehdr	*eh = (Elf_Ehdr *)p;
 	Elf_Shdr	*sh;
-	size_t		 i;
+	size_t		 i, snlen;
+
+	snlen = strlen(ELF_SYMTAB);
 
 	for (i = 0; i < eh->e_shnum; i++) {
 		sh = (Elf_Shdr *)(p + eh->e_shoff + i * eh->e_shentsize);
@@ -107,12 +109,10 @@ elf_getsymtab(const char *p, const char *shstrtab, size_t shstrtabsize,
 		if (sh->sh_type != SHT_SYMTAB)
 			continue;
 
-		if ((sh->sh_link >= eh->e_shnum) ||
-		    (sh->sh_name >= shstrtabsize))
+		if ((sh->sh_link >= eh->e_shnum) || (sh->sh_name >= shstrtabsz))
 			continue;
 
-		if (strncmp(shstrtab + sh->sh_name, ELF_SYMTAB,
-		    strlen(ELF_SYMTAB)) == 0) {
+		if (strncmp(shstrtab + sh->sh_name, ELF_SYMTAB, snlen) == 0) {
 			if (symtab != NULL)
 				*symtab = (Elf_Sym *)(p + sh->sh_offset);
 			if (nsymb != NULL)
@@ -127,25 +127,25 @@ elf_getsymtab(const char *p, const char *shstrtab, size_t shstrtabsize,
 
 int
 elf_getsection(const char *p, const char *sname, const char *shstrtab,
-    size_t shstrtabsize, const char **sdata, size_t *ssize)
+    size_t shstrtabsz, const char **sdata, size_t *ssz)
 {
 	Elf_Ehdr	*eh = (Elf_Ehdr *)p;
 	Elf_Shdr	*sh;
-	size_t		 i;
+	size_t		 i, snlen;
+
+	snlen = strlen(sname);
 
 	for (i = 0; i < eh->e_shnum; i++) {
 		sh = (Elf_Shdr *)(p + eh->e_shoff + i * eh->e_shentsize);
 
-		if ((sh->sh_link >= eh->e_shnum) ||
-		    (sh->sh_name >= shstrtabsize))
+		if ((sh->sh_link >= eh->e_shnum) || (sh->sh_name >= shstrtabsz))
 			continue;
 
-		if (strncmp(shstrtab + sh->sh_name, sname,
-		    strlen(sname)) == 0) {
+		if (strncmp(shstrtab + sh->sh_name, sname, snlen) == 0) {
 			if (sdata != NULL)
 				*sdata = p + sh->sh_offset;
-			if (ssize != NULL)
-				*ssize = sh->sh_size;
+			if (ssz != NULL)
+				*ssz = sh->sh_size;
 
 			return 0;
 		}
