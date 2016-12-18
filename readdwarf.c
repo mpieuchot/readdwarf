@@ -51,16 +51,16 @@
 int		 dump(const char *, uint8_t);
 __dead void	 usage(void);
 
-int		 dwarf_dump(const char *, size_t, uint8_t);
+int		 dwarf_dump(char *, size_t, uint8_t);
 int		 dump_cu(struct dwcu *);
 void		 dump_dav(struct dwaval *, size_t);
 
 /* elf.c */
 int		 iself(const char *, size_t);
 int		 elf_getshstab(const char *, size_t, const char **, size_t *);
-int		 elf_getsymtab(const char *, const char *, size_t,
+ssize_t		 elf_getsymtab(const char *, const char *, size_t,
 		     const Elf_Sym **, size_t *);
-int		 elf_getsection(const char *, const char *, const char *,
+ssize_t		 elf_getsection(char *, const char *, const char *,
 		     size_t, const char **, size_t *);
 
 uint64_t	 dav2val(struct dwaval *, size_t);
@@ -136,7 +136,7 @@ dump(const char *path, uint8_t flags)
 		return 1;
 	}
 
-	p = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	p = mmap(NULL, st.st_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (p == MAP_FAILED)
 		err(1, "mmap");
 
@@ -153,13 +153,13 @@ const char		*dstrbuf;
 size_t			 dstrlen;
 
 int
-dwarf_dump(const char *p, size_t filesize, uint8_t flags)
+dwarf_dump(char *p, size_t filesize, uint8_t flags)
 {
 	Elf_Ehdr		*eh = (Elf_Ehdr *)p;
 	Elf_Shdr		*sh;
-	const char		*shstab;
-	const char		*infobuf, *abbuf;
-	size_t			 infolen, ablen;
+	const Elf_Sym		*symtab;
+	const char		*shstab, *infobuf, *abbuf;
+	size_t			 nsymb, infolen, ablen;
 	size_t			 i, shstabsz;
 
 	/* Find section header string table location and size. */
@@ -168,19 +168,20 @@ dwarf_dump(const char *p, size_t filesize, uint8_t flags)
 
 	/* Find abbreviation location and size. */
 	if (elf_getsection(p, DEBUG_ABBREV, shstab, shstabsz, &abbuf,
-	    &ablen)) {
+	    &ablen) == -1) {
 		warnx("%s section not found", DEBUG_ABBREV);
 		return 1;
 	}
 
 	if (elf_getsection(p, DEBUG_INFO, shstab, shstabsz, &infobuf,
-	    &infolen)) {
+	    &infolen) == -1) {
 		warnx("%s section not found", DEBUG_INFO);
 		return 1;
 	}
 
 	/* Find string table location and size. */
-	if (elf_getsection(p, DEBUG_STR, shstab, shstabsz, &dstrbuf, &dstrlen))
+	if (elf_getsection(p, DEBUG_STR, shstab, shstabsz, &dstrbuf,
+	    &dstrlen) == -1)
 		warnx("%s section not found", DEBUG_STR);
 
 
