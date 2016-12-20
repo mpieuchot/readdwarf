@@ -186,11 +186,15 @@ elf_reloc_size(unsigned long type)
 	case R_X86_64_32:
 		return sizeof(uint32_t);
 #endif
+#ifdef RELOC_32
+	case RELOC_32:
+		return sizeof(uint32_t);
+#endif
 	default:
 		break;
 	}
 
-	return 0;
+	return -1;
 }
 
 #define ELF_WRITE_RELOC(buf, val, rsize)				\
@@ -248,7 +252,7 @@ elf_reloc_apply(const char *p, const char *shstab, size_t shstabsz,
 				value = sym->st_value + rela[j].r_addend;
 
 				rsize = elf_reloc_size(rtyp);
-				if (roff + rsize >= ssz)
+				if (rsize == -1 || roff + rsize >= ssz)
 					continue;
 
 				ELF_WRITE_RELOC(sdata + roff, value, rsize);
@@ -266,7 +270,7 @@ elf_reloc_apply(const char *p, const char *shstab, size_t shstabsz,
 				value = sym->st_value;
 
 				rsize = elf_reloc_size(rtyp);
-				if (roff + rsize >= ssz)
+				if (rsize == -1 || roff + rsize >= ssz)
 					continue;
 
 				ELF_WRITE_RELOC(sdata + roff, value, rsize);
