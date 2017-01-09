@@ -527,9 +527,6 @@ dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
 	if (info->len == 0 || abbrev->len == 0)
 		return EINVAL;
 
-	if (dw_skip_bytes(&abseg, abbroff))
-		return -1;
-
 	/* Offset in the segment of the current Compile Unit. */
 	segoff = seglen - info->len;
 
@@ -550,6 +547,9 @@ dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
 	if (dw_read_u16(&dwbuf, &version) ||
 	    dw_read_bytes(&dwbuf, &abbroff, addrsize) ||
 	    dw_read_u8(&dwbuf, &psz))
+		return -1;
+
+	if (dw_skip_bytes(&abseg, abbroff))
 		return -1;
 
 	/* Only DWARF2 until extended. */
