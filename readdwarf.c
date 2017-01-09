@@ -53,7 +53,7 @@ __dead void	 usage(void);
 
 int		 dwarf_dump(char *, size_t, uint8_t);
 int		 dump_cu(struct dwcu *);
-void		 dump_dav(struct dwaval *, size_t);
+void		 dump_dav(struct dwaval *, size_t, size_t);
 
 /* elf.c */
 int		 iself(const char *, size_t);
@@ -246,14 +246,14 @@ dump_cu(struct dwcu *dcu)
 		    dw_tag2name(die->die_dab->dab_tag));
 
 		SIMPLEQ_FOREACH(dav, &die->die_avals, dav_next)
-			dump_dav(dav, dcu->dcu_psize);
+			dump_dav(dav, dcu->dcu_psize, dcu->dcu_offset);
 	}
 
 	return 0;
 }
 
 void
-dump_dav(struct dwaval *dav, size_t psz)
+dump_dav(struct dwaval *dav, size_t psz, size_t offset)
 {
 	uint64_t attr = dav->dav_dat->dat_attr;
 	uint64_t form = dav->dav_dat->dat_form;
@@ -336,7 +336,7 @@ dump_dav(struct dwaval *dav, size_t psz)
 	case DW_AT_type:
 	case DW_AT_sibling:
 	case DW_AT_abstract_origin:
-		printf("<%llx>", val);
+		printf("<%llx>", val + offset);
 		break;
 	default:
 		printf("unimplemented");
