@@ -217,8 +217,9 @@ elf_reloc_apply(const char *p, const char *shstab, size_t shstabsz,
 	Elf_Rel		*rel = NULL;
 	Elf_RelA	*rela = NULL;
 	const Elf_Sym	*symtab, *sym;
-	ssize_t		 i, j, symtabidx;
+	ssize_t		 symtabidx;
 	size_t		 nsymb, rsym, rtyp, roff;
+	size_t		 i, j;
 	uint64_t	 value;
 	int		 rsize;
 
