@@ -287,6 +287,8 @@ dump_dav(struct dwaval *dav, size_t psz, size_t offset)
 		}
 		break;
 	case DW_AT_byte_size:
+	case DW_AT_bit_size:
+	case DW_AT_bit_offset:
 	case DW_AT_decl_file:
 	case DW_AT_decl_line:
 	case DW_AT_upper_bound:
@@ -339,7 +341,7 @@ dump_dav(struct dwaval *dav, size_t psz, size_t offset)
 		printf("<%llx>", val + offset);
 		break;
 	default:
-		printf("unimplemented");
+		printf("unimplemented: %s (%lld)", dw_form2name(form), val);
 		break;
 	}
 	printf("\n");
