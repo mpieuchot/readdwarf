@@ -259,6 +259,9 @@ dump_dav(struct dwaval *dav, size_t psz, size_t offset)
 	uint64_t form = dav->dav_dat->dat_form;
 	uint64_t val = 0;
 	const char *str = NULL;
+	unsigned int i;
+	uint64_t oper1;
+	uint8_t op;
 
 	printf("     %-18s: ", dw_at2name(attr));
 
@@ -322,7 +325,12 @@ dump_dav(struct dwaval *dav, size_t psz, size_t offset)
 		case DW_FORM_block2:
 		case DW_FORM_block4:
 		case DW_FORM_block:
-			printf("%llu byte block", val);
+			printf("%zu byte block:", dav->dav_buf.len);
+			for (i = 0; i < dav->dav_buf.len; i++)
+				printf(" %x", (uint8_t)dav->dav_buf.buf[i]);
+			if (dw_loc_parse(&dav->dav_buf, &op, &oper1, NULL))
+				break;
+			printf("\t(%s %lld)", dw_op2name(op), oper1);
 			break;
 		case DW_FORM_data1:
 		case DW_FORM_data2:
