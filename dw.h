@@ -86,6 +86,9 @@ struct dwcu {
 const char	*dw_tag2name(uint64_t);
 const char	*dw_at2name(uint64_t);
 const char	*dw_form2name(uint64_t);
+const char	*dw_op2name(uint8_t);
+
+int	 dw_loc_parse(struct dwbuf *, uint8_t *, uint64_t *, uint64_t *);
 
 int	 dw_ab_parse(struct dwbuf *, struct dwabbrev_queue *);
 int	 dw_cu_parse(struct dwbuf *, struct dwbuf *, size_t, struct dwcu **);
