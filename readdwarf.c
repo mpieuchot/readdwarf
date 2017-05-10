@@ -155,12 +155,9 @@ size_t			 dstrlen;
 int
 dwarf_dump(char *p, size_t filesize, uint8_t flags)
 {
-	Elf_Ehdr		*eh = (Elf_Ehdr *)p;
-	Elf_Shdr		*sh;
-	const Elf_Sym		*symtab;
 	const char		*shstab, *infobuf, *abbuf;
-	size_t			 nsymb, infolen, ablen;
-	size_t			 i, shstabsz;
+	size_t			 infolen, ablen;
+	size_t			 shstabsz;
 
 	/* Find section header string table location and size. */
 	if (elf_getshstab(p, filesize, &shstab, &shstabsz))
