@@ -384,6 +384,7 @@ dav2val(struct dwaval *dav, size_t psz)
 	case DW_FORM_ref4:
 		val = dav->dav_u32;
 		break;
+	case DW_FORM_sdata:
 	case DW_FORM_data8:
 	case DW_FORM_ref8:
 		val = dav->dav_u64;
