@@ -551,7 +551,7 @@ dw_cu_parse(struct dwbuf *info, struct dwbuf *abbrev, size_t seglen,
 	if (length >= 0xfffffff0 || length > info->len)
 		return EOVERFLOW;
 
-	/* Offset of the next Compule Unit. */
+	/* Offset of the next Compile Unit. */
 	nextoff = segoff + length + sizeof(uint32_t);
 
 	if (dw_read_buf(info, &dwbuf, length))
