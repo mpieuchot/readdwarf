@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <sys/param.h>
+#include <sys/types.h>
 #include <sys/exec_elf.h>
 
 #include <machine/reloc.h>
@@ -134,7 +134,7 @@ elf_getsymtab(const char *p, const char *shstab, size_t shstabsz,
 }
 
 ssize_t
-elf_getsection(char *p, const char *sname, const char *shstab,
+elf_getsection(char *p, size_t filesize, const char *sname, const char *shstab,
     size_t shstabsz, const char **psdata, size_t *pssz)
 {
 	Elf_Ehdr	*eh = (Elf_Ehdr *)p;
@@ -152,6 +152,9 @@ elf_getsection(char *p, const char *sname, const char *shstab,
 		sh = (Elf_Shdr *)(p + eh->e_shoff + i * eh->e_shentsize);
 
 		if ((sh->sh_link >= eh->e_shnum) || (sh->sh_name >= shstabsz))
+			continue;
+
+		if (sh->sh_offset >= filesize)
 			continue;
 
 		if (strncmp(shstab + sh->sh_name, sname, snlen) == 0) {
