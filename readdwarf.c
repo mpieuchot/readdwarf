@@ -129,10 +129,12 @@ dump(const char *path, uint8_t flags)
 	}
 	if (fstat(fd, &st) == -1) {
 		warn("fstat");
+		close(fd);
 		return 1;
 	}
 	if ((uintmax_t)st.st_size > SIZE_MAX) {
 		warnx("file too big to fit memory");
+		close(fd);
 		return 1;
 	}
 
